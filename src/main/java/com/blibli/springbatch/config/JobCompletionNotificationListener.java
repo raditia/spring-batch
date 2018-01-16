@@ -1,6 +1,7 @@
 package com.blibli.springbatch.config;
 
 import com.blibli.springbatch.model.Person;
+import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.BatchStatus;
@@ -20,15 +21,26 @@ public class JobCompletionNotificationListener extends JobExecutionListenerSuppo
 
     private static final Logger log = LoggerFactory.getLogger(JobCompletionNotificationListener.class);
     private final JdbcTemplate jdbcTemplate;
+    private DateTime startTime, stopTime;
 
     @Autowired
     public JobCompletionNotificationListener(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    @Override
+    public void beforeJob(JobExecution jobExecution) {
+        startTime = new DateTime();
+        System.out.println("Job starts at: " + startTime);
+    }
+    @Override
     public void afterJob(JobExecution jobExecution) {
+        startTime = new DateTime();
+
         if (jobExecution.getStatus() == BatchStatus.COMPLETED) {
             log.info("!!! JOB FINISHED! Time to verify the results");
+            System.out.println("Job stops at: " + stopTime);
+            System.out.println("Total time take in millis: " + getTimeInMillis(startTime, stopTime));
         }
 
         List<Person> results = jdbcTemplate.query("SELECT id, first_name, last_name, email, gender, address " +
@@ -47,5 +59,9 @@ public class JobCompletionNotificationListener extends JobExecutionListenerSuppo
         for (Person person : results) {
             log.info("Found <" + person + "> in the database.");
         }
+    }
+
+    private long getTimeInMillis(DateTime start, DateTime stop) {
+        return stop.getMillis() - start.getMillis();
     }
 }
